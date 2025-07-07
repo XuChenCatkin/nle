@@ -153,10 +153,10 @@ pybind11_add_module(
   src/drawing.c
   src/objects.c
   $<TARGET_OBJECTS:tile>)
-target_link_libraries(_pynethack PUBLIC nethackdl)
+target_link_libraries(_pynethack PUBLIC nethackdl nethack)
 set_target_properties(_pynethack PROPERTIES CXX_STANDARD 14)
 target_include_directories(_pynethack PUBLIC ${NLE_INC_GEN})
-add_dependencies(_pynethack util) # For pm.h.
+add_dependencies(_pynethack util nethack) # For pm.h.
 
 # ttyrec converter library
 add_library(
