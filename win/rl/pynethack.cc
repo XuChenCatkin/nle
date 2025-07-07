@@ -629,6 +629,20 @@ PYBIND11_MODULE(_pynethack, m)
            py::vectorize([](int glyph) { return glyph_is_swallow(glyph); }));
     mn.def("glyph_is_warning",
            py::vectorize([](int glyph) { return glyph_is_warning(glyph); }));
+    mn.def("glyph_to_char",
+           py::vectorize(
+            [](int glyph) 
+            { 
+                int sym, color, special; 
+                mapglyph(glyph, &sym, &color, &special, 0, 0, 0);
+                return (unsigned char)sym;
+            }), "Returns the character for a glyph.");
+    mn.def("glyph_to_color",
+           py::vectorize([](int glyph) -> int {
+               int sym, color, special;
+               mapglyph(glyph, &sym, &color, &special, 0, 0, 0);
+               return color;
+           }), "Returns the color for a glyph.");
 
 #ifdef NLE_USE_TILES
     mn.attr("glyph2tile") =
