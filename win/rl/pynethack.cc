@@ -633,13 +633,15 @@ PYBIND11_MODULE(_pynethack, m)
            py::vectorize(
             [](int glyph) 
             { 
-                int sym, color, special; 
+                int sym, color;
+                unsigned special; 
                 mapglyph(glyph, &sym, &color, &special, 0, 0, 0);
                 return (unsigned char)sym;
             }), "Returns the character for a glyph.");
     mn.def("glyph_to_color",
            py::vectorize([](int glyph) -> int {
-               int sym, color, special;
+               int sym, color;
+               unsigned special;
                mapglyph(glyph, &sym, &color, &special, 0, 0, 0);
                return color;
            }), "Returns the color for a glyph.");
