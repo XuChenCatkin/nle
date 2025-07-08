@@ -630,21 +630,112 @@ PYBIND11_MODULE(_pynethack, m)
     mn.def("glyph_is_warning",
            py::vectorize([](int glyph) { return glyph_is_warning(glyph); }));
     mn.def("glyph_to_char",
-           py::vectorize(
-            [](int glyph) 
-            { 
-                int sym, color;
-                unsigned special; 
-                mapglyph(glyph, &sym, &color, &special, 0, 0, 0);
-                return (unsigned char)sym;
-            }), "Returns the character for a glyph.");
+           py::vectorize([](int glyph) -> unsigned char {
+               // Implement the same logic as mapglyph() but without requiring game state
+               // Return the character from showsyms[] array using the same index calculation
+               int idx = 0;
+               
+               if (glyph_is_monster(glyph)) {
+                   // Monster: mons[glyph].mlet + SYM_OFF_M (for normal monsters)
+                   idx = mons[glyph].mlet + SYM_OFF_M;
+               } else if (glyph_is_pet(glyph)) {
+                   // Pet: same as monster but different glyph range
+                   int offset = glyph - GLYPH_PET_OFF;
+                   if (offset >= 0 && offset < NUMMONS) {
+                       idx = mons[offset].mlet + SYM_OFF_M;
+                   }
+               } else if (glyph_is_object(glyph)) {
+                   // Object: objects[offset].oc_class + SYM_OFF_O
+                   int offset = glyph - GLYPH_OBJ_OFF;
+                   if (offset >= 0 && offset < NUM_OBJECTS) {
+                       idx = objects[offset].oc_class + SYM_OFF_O;
+                       // Special case for boulder
+                       if (offset == BOULDER) {
+                           idx = SYM_BOULDER + SYM_OFF_X;
+                       }
+                   }
+               } else if (glyph_is_cmap(glyph)) {
+                   // Map feature: offset + SYM_OFF_P
+                   int offset = glyph - GLYPH_CMAP_OFF;
+                   if (offset >= 0 && offset < MAXPCHARS) {
+                       idx = offset + SYM_OFF_P;
+                   }
+               } else if (glyph_is_body(glyph)) {
+                   // Corpse: use corpse object symbol
+                   idx = objects[CORPSE].oc_class + SYM_OFF_O;
+               } else if (glyph_is_statue(glyph)) {
+                   // Statue: use monster symbol
+                   int offset = glyph - GLYPH_STATUE_OFF;
+                   if (offset >= 0 && offset < NUMMONS) {
+                       idx = mons[offset].mlet + SYM_OFF_M;
+                   }
+               } else if (glyph_is_invisible(glyph)) {
+                   // Invisible: special symbol
+                   idx = SYM_INVISIBLE + SYM_OFF_X;
+               } else {
+                   // Default case - treat as space
+                   return (unsigned char)' ';
+               }
+               
+               // Return the character from showsyms array
+               if (idx >= 0 && idx < SYM_MAX) {
+                   return (unsigned char)showsyms[idx];
+               }
+               return (unsigned char)' ';
+           }), "Returns the character for a glyph using showsyms lookup like mapglyph().");
     mn.def("glyph_to_color",
            py::vectorize([](int glyph) -> int {
-               int sym, color;
-               unsigned special;
-               mapglyph(glyph, &sym, &color, &special, 0, 0, 0);
+               // Implement color logic similar to mapglyph() 
+               int color = NO_COLOR;
+               
+               if (glyph_is_monster(glyph)) {
+                   // Monster color from mons[].mcolor
+                   if (glyph < NUMMONS) {
+                       color = mons[glyph].mcolor;
+                   }
+               } else if (glyph_is_pet(glyph)) {
+                   // Pet color
+                   int offset = glyph - GLYPH_PET_OFF;
+                   if (offset >= 0 && offset < NUMMONS) {
+                       color = mons[offset].mcolor;
+                   }
+               } else if (glyph_is_object(glyph)) {
+                   // Object color from objects[].oc_color
+                   int offset = glyph - GLYPH_OBJ_OFF;
+                   if (offset >= 0 && offset < NUM_OBJECTS) {
+                       color = objects[offset].oc_color;
+                   }
+               } else if (glyph_is_cmap(glyph)) {
+                   // Map feature color from defsyms[].color
+                   int offset = glyph - GLYPH_CMAP_OFF;
+                   if (offset >= 0 && offset < MAXPCHARS) {
+#ifdef TEXTCOLOR
+                       color = defsyms[offset].color;
+#else
+                       color = NO_COLOR;
+#endif
+                   }
+               } else if (glyph_is_body(glyph)) {
+                   // Corpse: use monster color for the corpse
+                   int offset = glyph - GLYPH_BODY_OFF;
+                   if (offset >= 0 && offset < NUMMONS) {
+                       color = mons[offset].mcolor;
+                   }
+               } else if (glyph_is_statue(glyph)) {
+                   // Statue: typically red or object color
+                   color = objects[STATUE].oc_color;
+               } else if (glyph_is_invisible(glyph)) {
+                   // Invisible: no color
+                   color = NO_COLOR;
+               } else if (glyph_is_trap(glyph)) {
+                   // Trap: typically magenta
+                   color = CLR_MAGENTA;
+               } else {
+                   color = CLR_WHITE; // Default color
+               }
+               
                return color;
-           }), "Returns the color for a glyph.");
+           }), "Returns the color for a glyph using the same logic as mapglyph().");
 
 #ifdef NLE_USE_TILES
     mn.attr("glyph2tile") =
