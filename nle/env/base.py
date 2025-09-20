@@ -380,7 +380,6 @@ class NLE(gym.Env):
         last_observation = tuple(a.copy() for a in self.last_observation)
 
         observation, done = self.nethack.step(self.actions[action])
-        truncated = self._check_abort(observation)
 
         is_game_over = observation[self._program_state_index][0] == 1
         if is_game_over or not self._allow_all_modes:
@@ -390,6 +389,9 @@ class NLE(gym.Env):
 
         self._steps += 1
 
+        # Check truncation AFTER incrementing steps
+        truncated = self._check_abort(observation)
+
         self.last_observation = observation
 
         end_status = self._get_end_status(observation, done)
@@ -398,10 +400,13 @@ class NLE(gym.Env):
             self._reward_fn(last_observation, action, observation, end_status)
         )
 
-        if end_status and not done:
+        # Handle episode termination: quit game for any end condition
+        if (end_status and not done) or truncated:
             # Try to end the game nicely.
             self._quit_game(observation, done)
-            done = True
+            # Only set done=True for natural end conditions, NOT when truncated
+            if end_status and not done and not truncated:
+                done = True
 
         return (
             self._get_observation(observation),
