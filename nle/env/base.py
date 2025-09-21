@@ -400,13 +400,13 @@ class NLE(gym.Env):
             self._reward_fn(last_observation, action, observation, end_status)
         )
 
-        # Handle episode termination: quit game for any end condition
-        if (end_status and not done) or truncated:
-            # Try to end the game nicely.
+        # Handle episode termination: quit game for natural end conditions
+        if end_status and not done and not truncated:
+            # Try to end the game nicely for natural end conditions. 
+            # For truncation, leave the game as is so that we can calculate value function properly.
             self._quit_game(observation, done)
             # Only set done=True for natural end conditions, NOT when truncated
-            if end_status and not done and not truncated:
-                done = True
+            done = True
 
         return (
             self._get_observation(observation),
